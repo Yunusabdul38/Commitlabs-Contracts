@@ -4,6 +4,7 @@ use soroban_sdk::{
     Val, BytesN, IntoVal,
 };
 use soroban_sdk::storage::Storage;
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -215,15 +216,18 @@ impl CommitmentCoreContract {
     /// Check if an address is an authorized allocator
     pub fn is_authorized_allocator(e: Env, allocator: Address) -> bool {
         is_authorized_allocator(&e, &allocator)
+    pub fn initialize(_e: Env, _admin: Address, _nft_contract: Address) {
+        // TODO: Store admin and NFT contract address
+        // TODO: Initialize storage
     }
 
     /// Create a new commitment
     pub fn create_commitment(
         e: Env,
-        owner: Address,
-        amount: i128,
-        asset_address: Address,
-        rules: CommitmentRules,
+        _owner: Address,
+        _amount: i128,
+        _asset_address: Address,
+        _rules: CommitmentRules,
     ) -> String {
         // TODO: Validate rules
         // TODO: Transfer assets from owner to contract
@@ -236,10 +240,32 @@ impl CommitmentCoreContract {
     /// Get commitment details
     pub fn get_commitment(e: Env, commitment_id: String) -> Option<Commitment> {
         get_commitment(&e, &commitment_id)
+    pub fn get_commitment(e: Env, commitment_id: String) -> Commitment {
+        // TODO: Retrieve commitment from storage
+        // For now, return placeholder data with valid addresses
+        let dummy_address = Address::from_string(&String::from_str(&e, "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"));
+        Commitment {
+            commitment_id,
+            owner: dummy_address.clone(),
+            nft_token_id: 0,
+            rules: CommitmentRules {
+                duration_days: 0,
+                max_loss_percent: 0,
+                commitment_type: String::from_str(&e, "placeholder"),
+                early_exit_penalty: 0,
+                min_fee_threshold: 0,
+            },
+            amount: 0,
+            asset_address: dummy_address,
+            created_at: 0,
+            expires_at: 0,
+            current_value: 0,
+            status: String::from_str(&e, "active"),
+        }
     }
 
     /// Update commitment value (called by allocation logic)
-    pub fn update_value(e: Env, commitment_id: String, new_value: i128) {
+    pub fn update_value(_e: Env, _commitment_id: String, _new_value: i128) {
         // TODO: Verify caller is authorized (allocation contract)
         // TODO: Update current_value
         // TODO: Check if max_loss_percent is violated
@@ -247,7 +273,7 @@ impl CommitmentCoreContract {
     }
 
     /// Check if commitment rules are violated
-    pub fn check_violations(e: Env, commitment_id: String) -> bool {
+    pub fn check_violations(_e: Env, _commitment_id: String) -> bool {
         // TODO: Check if max_loss_percent exceeded
         // TODO: Check if duration expired
         // TODO: Check other rule violations
@@ -255,7 +281,7 @@ impl CommitmentCoreContract {
     }
 
     /// Settle commitment at maturity
-    pub fn settle(e: Env, commitment_id: String) {
+    pub fn settle(_e: Env, _commitment_id: String) {
         // TODO: Verify commitment is expired
         // TODO: Calculate final settlement amount
         // TODO: Transfer assets back to owner
@@ -265,7 +291,7 @@ impl CommitmentCoreContract {
     }
 
     /// Early exit (with penalty)
-    pub fn early_exit(e: Env, commitment_id: String, caller: Address) {
+    pub fn early_exit(_e: Env, _commitment_id: String, _caller: Address) {
         // TODO: Verify caller is owner
         // TODO: Calculate penalty
         // TODO: Transfer remaining amount (after penalty) to owner
@@ -411,6 +437,13 @@ impl CommitmentCoreContract {
             (symbol_short!("dealloc"), symbol_short!("amount")),
             amount,
         );
+    /// Allocate liquidity (called by allocation strategy)
+    pub fn allocate(_e: Env, _commitment_id: String, _target_pool: Address, _amount: i128) {
+        // TODO: Verify caller is authorized allocation contract
+        // TODO: Verify commitment is active
+        // TODO: Transfer assets to target pool
+        // TODO: Record allocation
+        // TODO: Emit allocation event
     }
 }
 
