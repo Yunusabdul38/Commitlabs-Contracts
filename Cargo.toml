@@ -6,6 +6,9 @@ members = [
 ]
 # Note: tests/integration is excluded from workspace to prevent testutils feature
 # from being enabled during WASM builds. Run integration tests separately.
+exclude = [
+    "tests/integration",
+]
 resolver = "2"
 
 [profile.release]

@@ -6,6 +6,9 @@ edition = "2021"
 # This is a test-only package - not a deployable contract
 # It should only be built for native targets (not wasm)
 
+# Explicitly exclude from workspace
+[workspace]
+
 [dev-dependencies]
 # Use the same soroban-sdk version as the contracts
 soroban-sdk = { version = "21.0.0", features = ["testutils"] }
