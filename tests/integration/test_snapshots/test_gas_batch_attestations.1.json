@@ -89,58 +89,6 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "CID"
-                },
-                {
-                  "u32": 1
-                }
-              ]
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-                "key": {
-                  "vec": [
-                    {
-                      "symbol": "CID"
-                    },
-                    {
-                      "u32": 1
-                    }
-                  ]
-                },
-                "durability": "persistent",
-                "val": {
-                  "vec": [
-                    {
-                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                    },
-                    {
-                      "u64": 0
-                    }
-                  ]
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-            "key": {
-              "vec": [
-                {
                   "symbol": "Commit"
                 },
                 {
@@ -195,7 +143,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {
@@ -314,102 +262,6 @@
         {
           "contract_data": {
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-            "key": {
-              "vec": [
-                {
-                  "symbol": "OWNREV"
-                },
-                {
-                  "string": "commit"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                }
-              ]
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-                "key": {
-                  "vec": [
-                    {
-                      "symbol": "OWNREV"
-                    },
-                    {
-                      "string": "commit"
-                    },
-                    {
-                      "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                    }
-                  ]
-                },
-                "durability": "persistent",
-                "val": {
-                  "u32": 1
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-            "key": {
-              "vec": [
-                {
-                  "symbol": "REV"
-                },
-                {
-                  "string": "commit"
-                }
-              ]
-            },
-            "durability": "persistent"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
-                "key": {
-                  "vec": [
-                    {
-                      "symbol": "REV"
-                    },
-                    {
-                      "string": "commit"
-                    }
-                  ]
-                },
-                "durability": "persistent",
-                "val": {
-                  "u32": 1
-                }
-              }
-            },
-            "ext": "v0"
-          },
-          4095
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
             "key": "ledger_key_contract_instance",
             "durability": "persistent"
           }
@@ -431,10 +283,26 @@
                     "storage": [
                       {
                         "key": {
+                          "symbol": "ADMIN"
+                        },
+                        "val": {
+                          "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
+                        }
+                      },
+                      {
+                        "key": {
                           "symbol": "CNTR"
                         },
                         "val": {
                           "u32": 1
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "NFT"
+                        },
+                        "val": {
+                          "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
                         }
                       }
                     ]
@@ -457,7 +325,7 @@
                   "symbol": "ATTS"
                 },
                 {
-                  "string": "commit"
+                  "u32": 1
                 }
               ]
             },
@@ -477,7 +345,7 @@
                       "symbol": "ATTS"
                     },
                     {
-                      "string": "commit"
+                      "u32": 1
                     }
                   ]
                 },
@@ -499,7 +367,7 @@
                             "symbol": "commitment_id"
                           },
                           "val": {
-                            "string": "commit"
+                            "u32": 1
                           }
                         },
                         {
@@ -560,7 +428,7 @@
                             "symbol": "commitment_id"
                           },
                           "val": {
-                            "string": "commit"
+                            "u32": 1
                           }
                         },
                         {
@@ -621,7 +489,7 @@
                             "symbol": "commitment_id"
                           },
                           "val": {
-                            "string": "commit"
+                            "u32": 1
                           }
                         },
                         {
@@ -682,7 +550,7 @@
                             "symbol": "commitment_id"
                           },
                           "val": {
-                            "string": "commit"
+                            "u32": 1
                           }
                         },
                         {
@@ -743,7 +611,7 @@
                             "symbol": "commitment_id"
                           },
                           "val": {
-                            "string": "commit"
+                            "u32": 1
                           }
                         },
                         {
@@ -1128,7 +996,7 @@
               }
             ],
             "data": {
-              "string": "commit"
+              "u32": 1
             }
           }
         }
@@ -1156,7 +1024,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "commit"
+                  "u32": 1
                 },
                 {
                   "string": "health_check"
@@ -1195,7 +1063,7 @@
                 "symbol": "attest"
               },
               {
-                "string": "commit"
+                "u32": 1
               }
             ],
             "data": {
@@ -1248,7 +1116,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "commit"
+                  "u32": 1
                 },
                 {
                   "string": "health_check"
@@ -1287,7 +1155,7 @@
                 "symbol": "attest"
               },
               {
-                "string": "commit"
+                "u32": 1
               }
             ],
             "data": {
@@ -1340,7 +1208,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "commit"
+                  "u32": 1
                 },
                 {
                   "string": "health_check"
@@ -1379,7 +1247,7 @@
                 "symbol": "attest"
               },
               {
-                "string": "commit"
+                "u32": 1
               }
             ],
             "data": {
@@ -1432,7 +1300,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "commit"
+                  "u32": 1
                 },
                 {
                   "string": "health_check"
@@ -1471,7 +1339,7 @@
                 "symbol": "attest"
               },
               {
-                "string": "commit"
+                "u32": 1
               }
             ],
             "data": {
@@ -1524,7 +1392,7 @@
             "data": {
               "vec": [
                 {
-                  "string": "commit"
+                  "u32": 1
                 },
                 {
                   "string": "health_check"
@@ -1563,7 +1431,7 @@
                 "symbol": "attest"
               },
               {
-                "string": "commit"
+                "u32": 1
               }
             ],
             "data": {
@@ -1614,7 +1482,7 @@
               }
             ],
             "data": {
-              "string": "commit"
+              "u32": 1
             }
           }
         }
@@ -1653,7 +1521,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {
@@ -1714,7 +1582,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {
@@ -1775,7 +1643,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {
@@ -1836,7 +1704,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {
@@ -1897,7 +1765,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "commit"
+                        "u32": 1
                       }
                     },
                     {

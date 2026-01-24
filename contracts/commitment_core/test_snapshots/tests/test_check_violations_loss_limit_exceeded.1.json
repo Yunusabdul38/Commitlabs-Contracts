@@ -27,7 +27,7 @@
                   "symbol": "Commit"
                 },
                 {
-                  "string": "test_commitment_2"
+                  "u32": 2
                 }
               ]
             },
@@ -47,7 +47,7 @@
                       "symbol": "Commit"
                     },
                     {
-                      "string": "test_commitment_2"
+                      "u32": 2
                     }
                   ]
                 },
@@ -78,7 +78,7 @@
                         "symbol": "commitment_id"
                       },
                       "val": {
-                        "string": "test_commitment_2"
+                        "u32": 2
                       }
                     },
                     {
