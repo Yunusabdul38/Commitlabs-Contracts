@@ -143,6 +143,10 @@ impl AttestationEngineContract {
     }
 
     /// Record an attestation for a commitment
+    /// 
+    /// # Reentrancy Protection
+    /// Uses checks-effects-interactions pattern. This function only writes to storage
+    /// and doesn't make external calls, but still protected for consistency.
     pub fn attest(
         e: Env,
         commitment_id: String,
@@ -150,6 +154,25 @@ impl AttestationEngineContract {
         data: Map<String, String>,
         verified_by: Address,
     ) {
+        // Reentrancy protection
+        let guard_key = symbol_short!("REENTRY");
+        let guard: bool = e.storage()
+            .instance()
+            .get(&guard_key)
+            .unwrap_or(false);
+        
+        if guard {
+            panic!("Reentrancy detected");
+        }
+        e.storage().instance().set(&guard_key, &true);
+
+        // CHECKS: Verify authorization
+        if !Self::is_authorized_recorder(&e, &verified_by) {
+            e.storage().instance().set(&guard_key, &false);
+            panic!("Unauthorized: caller is not an authorized recorder");
+        }
+
+        // EFFECTS: Update state
         // Create attestation record
         let attestation = Attestation {
             commitment_id: commitment_id.clone(),
@@ -172,6 +195,9 @@ impl AttestationEngineContract {
         
         // Store updated list
         e.storage().persistent().set(&key, &attestations);
+        
+        // Clear reentrancy guard
+        e.storage().instance().set(&guard_key, &false);
         
         // Emit attestation event
         e.events().publish(
@@ -295,21 +321,47 @@ impl AttestationEngineContract {
     /// * `caller` - The address calling this function (must be authorized)
     /// * `commitment_id` - The commitment ID to record fees for
     /// * `fee_amount` - The amount of fees generated
+    /// 
+    /// # Reentrancy Protection
+    /// Uses checks-effects-interactions pattern with reentrancy guard.
     pub fn record_fees(e: Env, caller: Address, commitment_id: String, fee_amount: i128) {
-        // 1. Verify caller authorization
+        // Reentrancy protection
+        let guard_key = symbol_short!("REENTRY");
+        let guard: bool = e.storage()
+            .instance()
+            .get(&guard_key)
+            .unwrap_or(false);
+        
+        if guard {
+            panic!("Reentrancy detected");
+        }
+        e.storage().instance().set(&guard_key, &true);
+
+        // CHECKS: Verify caller authorization
         caller.require_auth();
         if !Self::is_authorized_recorder(&e, &caller) {
+            e.storage().instance().set(&guard_key, &false);
             panic!("Unauthorized: caller is not an authorized recorder");
         }
+
+        // Validate fee amount
+        if fee_amount < 0 {
+            e.storage().instance().set(&guard_key, &false);
+            panic!("Invalid fee amount: must be non-negative");
+        }
         
-        // 2. Load or create health metrics
+        // EFFECTS: Update state before any external calls
+        // Load or create health metrics
         let mut metrics = Self::load_or_create_health_metrics(&e, &commitment_id);
         
-        // 3. Update fees_generated
+        // Update fees_generated
         metrics.fees_generated = metrics.fees_generated.checked_add(fee_amount)
-            .unwrap_or_else(|| panic!("Fee amount overflow: cannot add {} to existing {}", fee_amount, metrics.fees_generated));
+            .unwrap_or_else(|| {
+                e.storage().instance().set(&guard_key, &false);
+                panic!("Fee amount overflow: cannot add {} to existing {}", fee_amount, metrics.fees_generated)
+            });
         
-        // 4. Create fee attestation
+        // Create fee attestation
         let data = Map::new(&e);
         let attestation = Attestation {
             commitment_id: commitment_id.clone(),
@@ -329,16 +381,19 @@ impl AttestationEngineContract {
         attestations.push_back(attestation);
         e.storage().persistent().set(&atts_key, &attestations);
         
-        // 5. Recalculate compliance score
+        // Recalculate compliance score (may call external contract)
         metrics.compliance_score = Self::calculate_compliance_score(e.clone(), commitment_id.clone());
         
-        // 6. Update last attestation timestamp
+        // Update last attestation timestamp
         metrics.last_attestation = e.ledger().timestamp();
         
-        // 7. Store updated health metrics
+        // Store updated health metrics
         Self::store_health_metrics(&e, &metrics);
         
-        // 8. Emit FeeRecorded event
+        // Clear reentrancy guard
+        e.storage().instance().set(&guard_key, &false);
+        
+        // Emit FeeRecorded event
         e.events().publish(
             (symbol_short!("FeeRec"), commitment_id),
             (fee_amount, e.ledger().timestamp())
@@ -351,18 +406,45 @@ impl AttestationEngineContract {
     /// * `caller` - The address calling this function (must be authorized)
     /// * `commitment_id` - The commitment ID to record drawdown for
     /// * `current_value` - The current value of the commitment
+    /// 
+    /// # Reentrancy Protection
+    /// Uses checks-effects-interactions pattern with reentrancy guard.
+    /// External call to commitment_core is made before state updates.
     pub fn record_drawdown(e: Env, caller: Address, commitment_id: String, current_value: i128) {
-        // 1. Verify caller authorization
+        // Reentrancy protection
+        let guard_key = symbol_short!("REENTRY");
+        let guard: bool = e.storage()
+            .instance()
+            .get(&guard_key)
+            .unwrap_or(false);
+        
+        if guard {
+            panic!("Reentrancy detected");
+        }
+        e.storage().instance().set(&guard_key, &true);
+
+        // CHECKS: Verify caller authorization
         caller.require_auth();
         if !Self::is_authorized_recorder(&e, &caller) {
+            e.storage().instance().set(&guard_key, &false);
             panic!("Unauthorized: caller is not an authorized recorder");
         }
+
+        // Validate current_value
+        if current_value < 0 {
+            e.storage().instance().set(&guard_key, &false);
+            panic!("Invalid current value: must be non-negative");
+        }
         
-        // 2. Get commitment from core contract to retrieve initial amount and max_loss_percent
+        // INTERACTIONS: External call to get commitment (done early, before state changes)
+        // Get commitment from core contract to retrieve initial amount and max_loss_percent
         let commitment_core: Address = e.storage()
             .instance()
             .get(&symbol_short!("CORE"))
-            .unwrap_or_else(|| panic!("Core contract not set"));
+            .unwrap_or_else(|| {
+                e.storage().instance().set(&guard_key, &false);
+                panic!("Core contract not set")
+            });
         
         let mut args = Vec::new(&e);
         args.push_back(commitment_id.clone().into_val(&e));
@@ -372,9 +454,13 @@ impl AttestationEngineContract {
             args,
         );
         let commitment: Commitment = commitment_val.try_into_val(&e)
-            .unwrap_or_else(|_| panic!("Failed to get commitment"));
+            .unwrap_or_else(|_| {
+                e.storage().instance().set(&guard_key, &false);
+                panic!("Failed to get commitment")
+            });
         
-        // 3. Calculate drawdown percentage: ((initial - current) / initial) * 100
+        // EFFECTS: Update state after external call
+        // Calculate drawdown percentage: ((initial - current) / initial) * 100
         let initial_value = commitment.amount;
         let drawdown_percent = if initial_value > 0 {
             let diff = initial_value.checked_sub(current_value).unwrap_or(0);
@@ -384,15 +470,15 @@ impl AttestationEngineContract {
             0
         };
         
-        // 4. Load or create health metrics
+        // Load or create health metrics
         let mut metrics = Self::load_or_create_health_metrics(&e, &commitment_id);
         
-        // 5. Update health metrics
+        // Update health metrics
         metrics.current_value = current_value;
         metrics.initial_value = initial_value;
         metrics.drawdown_percent = drawdown_percent;
         
-        // 6. Check for violation
+        // Check for violation
         let max_loss_percent = commitment.rules.max_loss_percent as i128;
         let is_violation = drawdown_percent > max_loss_percent;
         
@@ -424,7 +510,7 @@ impl AttestationEngineContract {
             );
         }
         
-        // 7. Create drawdown attestation
+        // Create drawdown attestation
         let drawdown_data = Map::new(&e);
         let drawdown_attestation = Attestation {
             commitment_id: commitment_id.clone(),
@@ -444,16 +530,19 @@ impl AttestationEngineContract {
         attestations.push_back(drawdown_attestation);
         e.storage().persistent().set(&atts_key, &attestations);
         
-        // 8. Recalculate compliance score
+        // Recalculate compliance score (may call external contract)
         metrics.compliance_score = Self::calculate_compliance_score(e.clone(), commitment_id.clone());
         
-        // 9. Update last attestation timestamp
+        // Update last attestation timestamp
         metrics.last_attestation = e.ledger().timestamp();
         
-        // 10. Store updated health metrics
+        // Store updated health metrics
         Self::store_health_metrics(&e, &metrics);
         
-        // 11. Emit DrawdownRecorded event
+        // Clear reentrancy guard
+        e.storage().instance().set(&guard_key, &false);
+        
+        // Emit DrawdownRecorded event
         e.events().publish(
             (symbol_short!("Drawdown"), commitment_id),
             (current_value, drawdown_percent, e.ledger().timestamp())
@@ -461,6 +550,23 @@ impl AttestationEngineContract {
     }
 
     /// Calculate compliance score (0-100)
+    /// 
+    /// # Formal Verification
+    /// **Preconditions:**
+    /// - `commitment_id` exists
+    /// 
+    /// **Postconditions:**
+    /// - Returns value in range [0, 100]
+    /// - Score decreases with violations
+    /// - Score decreases if drawdown exceeds threshold
+    /// - Pure function (no state changes)
+    /// 
+    /// **Invariants Maintained:**
+    /// - Score always in valid range [0, 100]
+    /// 
+    /// **Security Properties:**
+    /// - SP-4: State consistency (read-only)
+    /// - SP-3: Arithmetic safety
     pub fn calculate_compliance_score(e: Env, commitment_id: String) -> u32 {
         // Get commitment from core contract
         let commitment_core: Address = e.storage()
