@@ -303,6 +303,7 @@ pub enum DataKey {
     NftContract,
     Commitment(String),        // commitment_id -> Commitment
     OwnerCommitments(Address), // owner -> Vec<commitment_id>
+    ActiveCommitments,         // Vec<commitment_id>
     TotalCommitments,          // counter
     ReentrancyGuard,           // reentrancy protection flag
     TotalValueLocked,          // aggregate value locked across active commitments
@@ -360,6 +361,30 @@ fn call_nft_mint(
 }
 
 // Storage helpers
+fn get_admin(e: &Env) -> Address {
+    e.storage()
+        .instance()
+        .get::<_, Address>(&DataKey::Admin)
+        .unwrap_or_else(|| panic!("Contract not initialized"))
+}
+
+fn set_admin(e: &Env, admin: &Address) {
+    e.storage().instance().set(&DataKey::Admin, admin);
+}
+
+fn get_nft_contract(e: &Env) -> Address {
+    e.storage()
+        .instance()
+        .get::<_, Address>(&DataKey::NftContract)
+        .unwrap_or_else(|| panic!("Contract not initialized"))
+}
+
+fn set_nft_contract(e: &Env, nft_contract: &Address) {
+    e.storage()
+        .instance()
+        .set(&DataKey::NftContract, nft_contract);
+}
+
 fn read_commitment(e: &Env, commitment_id: &String) -> Option<Commitment> {
     e.storage()
         .instance()
@@ -377,6 +402,68 @@ fn has_commitment(e: &Env, commitment_id: &String) -> bool {
     e.storage()
         .instance()
         .has(&DataKey::Commitment(commitment_id.clone()))
+}
+
+fn get_owner_commitments(e: &Env, owner: &Address) -> Vec<String> {
+    e.storage()
+        .instance()
+        .get::<_, Vec<String>>(&DataKey::OwnerCommitments(owner.clone()))
+        .unwrap_or(Vec::new(e))
+}
+
+fn add_owner_commitment(e: &Env, owner: &Address, commitment_id: &String) {
+    let mut commitments = get_owner_commitments(e, owner);
+    commitments.push_back(commitment_id.clone());
+    e.storage()
+        .instance()
+        .set(&DataKey::OwnerCommitments(owner.clone()), &commitments);
+}
+
+fn get_active_commitments(e: &Env) -> Vec<String> {
+    e.storage()
+        .instance()
+        .get::<_, Vec<String>>(&DataKey::ActiveCommitments)
+        .unwrap_or(Vec::new(e))
+}
+
+fn add_active_commitment(e: &Env, commitment_id: &String) {
+    let mut active = get_active_commitments(e);
+    active.push_back(commitment_id.clone());
+    e.storage()
+        .instance()
+        .set(&DataKey::ActiveCommitments, &active);
+}
+
+fn remove_active_commitment(e: &Env, commitment_id: &String) {
+    let mut active = get_active_commitments(e);
+    let mut index = None;
+    for i in 0..active.len() {
+        if active.get_unchecked(i) == *commitment_id {
+            index = Some(i);
+            break;
+        }
+    }
+    if let Some(i) = index {
+        active.remove(i);
+        e.storage()
+            .instance()
+            .set(&DataKey::ActiveCommitments, &active);
+    }
+}
+
+fn get_total_commitments(e: &Env) -> u64 {
+    e.storage()
+        .instance()
+        .get::<_, u64>(&DataKey::TotalCommitments)
+        .unwrap_or(0)
+}
+
+fn increment_total_commitments(e: &Env) -> u64 {
+    let total = get_total_commitments(e) + 1;
+    e.storage()
+        .instance()
+        .set(&DataKey::TotalCommitments, &total);
+    total
 }
 
 /// Reentrancy protection helpers
@@ -545,10 +632,8 @@ impl CommitmentCoreContract {
         }
 
         // Store admin and NFT contract address
-        e.storage().instance().set(&DataKey::Admin, &admin);
-        e.storage()
-            .instance()
-            .set(&DataKey::NftContract, &nft_contract);
+        set_admin(&e, &admin);
+        set_nft_contract(&e, &nft_contract);
 
         // Initialize total commitments counter
         e.storage()
@@ -560,6 +645,10 @@ impl CommitmentCoreContract {
             .instance()
             .set(&DataKey::TotalValueLocked, &0i128);
 
+        // Initialize active commitments list
+        e.storage()
+            .instance()
+            .set(&DataKey::ActiveCommitments, &Vec::<String>::new(&e));
         // Fee config: default 0 bps, recipient set later
         e.storage()
             .instance()
@@ -697,21 +786,13 @@ impl CommitmentCoreContract {
         set_commitment(&e, &commitment);
 
         // Update owner's commitment list
-        let mut owner_commitments = e
-            .storage()
-            .instance()
-            .get::<_, Vec<String>>(&DataKey::OwnerCommitments(owner.clone()))
-            .unwrap_or(Vec::new(&e));
-        owner_commitments.push_back(commitment_id.clone());
-        e.storage().instance().set(
-            &DataKey::OwnerCommitments(owner.clone()),
-            &owner_commitments,
-        );
+        add_owner_commitment(&e, &owner, &commitment_id);
+
+        // Update active commitments list
+        add_active_commitment(&e, &commitment_id);
 
         // OPTIMIZATION: Increment both counters using already-read values
-        e.storage()
-            .instance()
-            .set(&DataKey::TotalCommitments, &(current_total + 1));
+        increment_total_commitments(&e);
         e.storage()
             .instance()
             .set(&DataKey::TotalValueLocked, &(current_tvl + amount_locked));
@@ -784,18 +865,17 @@ impl CommitmentCoreContract {
 
     /// Get all commitments for an owner
     pub fn get_owner_commitments(e: Env, owner: Address) -> Vec<String> {
-        e.storage()
-            .instance()
-            .get::<_, Vec<String>>(&DataKey::OwnerCommitments(owner))
-            .unwrap_or(Vec::new(&e))
+        get_owner_commitments(&e, &owner)
+    }
+
+    /// Get all active commitments
+    pub fn get_active_commitments(e: Env) -> Vec<String> {
+        get_active_commitments(&e)
     }
 
     /// Get total number of commitments
     pub fn get_total_commitments(e: Env) -> u64 {
-        e.storage()
-            .instance()
-            .get::<_, u64>(&DataKey::TotalCommitments)
-            .unwrap_or(0)
+        get_total_commitments(&e)
     }
 
     /// Get total value locked across all active commitments.
@@ -1016,6 +1096,9 @@ impl CommitmentCoreContract {
         commitment.status = String::from_str(&e, "settled");
         set_commitment(&e, &commitment);
 
+        // Remove from active commitments list
+        remove_active_commitment(&e, &commitment_id);
+
         // Decrease total value locked
         let current_tvl = e
             .storage()
@@ -1107,7 +1190,10 @@ impl CommitmentCoreContract {
         commitment.current_value = 0; // All value has been distributed
         set_commitment(&e, &commitment);
 
-        // Decrease total value locked by the value that was locked (before we zeroed it)
+        // Remove from active commitments list
+        remove_active_commitment(&e, &commitment_id);
+
+        // Decrease total value locked by full current value (no longer locked)
         let current_tvl = e
             .storage()
             .instance()
