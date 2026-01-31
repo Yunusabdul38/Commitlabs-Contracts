@@ -1,10 +1,6 @@
 #![no_std]
-use shared_utils::EmergencyControl;
-use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec,
-};
-
-pub const CURRENT_VERSION: u32 = 1;
+use soroban_sdk::{contract, contractimpl, contracttype, contracterror, symbol_short, Address, Env, String, Vec, Symbol};
+use shared_utils::Pausable;
 
 // ============================================================================
 // Error Types
@@ -152,11 +148,37 @@ impl CommitmentNFTContract {
         let token_ids: Vec<u32> = Vec::new(&e);
         e.storage().instance().set(&DataKey::TokenIds, &token_ids);
 
-        e.storage()
-            .instance()
-            .set(&DataKey::Version, &CURRENT_VERSION);
+        // Initialize paused state (default: not paused)
+        e.storage().instance().set(&Pausable::PAUSED_KEY, &false);
 
         Ok(())
+    }
+
+    /// Pause the contract
+    pub fn pause(e: Env) {
+        let admin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic!("Contract not initialized"));
+        admin.require_auth();
+        Pausable::pause(&e);
+    }
+
+    /// Unpause the contract
+    pub fn unpause(e: Env) {
+        let admin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic!("Contract not initialized"));
+        admin.require_auth();
+        Pausable::unpause(&e);
+    }
+
+    /// Check if the contract is paused
+    pub fn is_paused(e: Env) -> bool {
+        Pausable::is_paused(&e)
     }
 
     /// Validate commitment type
@@ -311,6 +333,9 @@ impl CommitmentNFTContract {
         }
         e.storage().instance().set(&DataKey::ReentrancyGuard, &true);
         EmergencyControl::require_not_emergency(&e);
+
+        // Check if contract is paused
+        Pausable::require_not_paused(&e);
 
         // CHECKS: Verify contract is initialized
         if !e.storage().instance().has(&DataKey::Admin) {
@@ -478,6 +503,9 @@ impl CommitmentNFTContract {
         }
         e.storage().instance().set(&DataKey::ReentrancyGuard, &true);
         EmergencyControl::require_not_emergency(&e);
+
+        // Check if contract is paused
+        Pausable::require_not_paused(&e);
 
         // CHECKS: Require authorization from the sender
         from.require_auth();
@@ -680,6 +708,9 @@ impl CommitmentNFTContract {
         }
         e.storage().instance().set(&DataKey::ReentrancyGuard, &true);
         EmergencyControl::require_not_emergency(&e);
+
+        // Check if contract is paused
+        Pausable::require_not_paused(&e);
 
         // CHECKS: Get the NFT
         let mut nft: CommitmentNFT = e

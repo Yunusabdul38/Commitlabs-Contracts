@@ -4,8 +4,7 @@ use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, token, Address, Env, IntoVal,
     Map, String, Symbol, TryIntoVal, Val, Vec,
 };
-
-pub const CURRENT_VERSION: u32 = 1;
+use shared_utils::{RateLimiter, Pausable};
 
 // ============================================================================
 // Error Types
@@ -279,7 +278,7 @@ impl AttestationEngineContract {
     }
 
     /// Check if an address is an authorized verifier
-    fn is_authorized_verifier(e: &Env, address: &Address) -> bool {
+fn is_authorized_verifier(e: &Env, address: &Address) -> bool {
         // Admin is always authorized
         if let Some(admin) = e
             .storage()
@@ -298,7 +297,54 @@ impl AttestationEngineContract {
             .unwrap_or(false)
     }
 
-    /// Check if an address is a verifier (public version)
+    /// Pause the contract
+    /// 
+    /// # Arguments
+    /// * `e` - The environment
+    /// 
+    /// # Panics
+    /// Panics if caller is not admin or if contract is already paused
+    pub fn pause(e: Env) {
+        // Enforce admin-only
+        let admin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic!("Contract not initialized"));
+        admin.require_auth();
+        Pausable::pause(&e);
+    }
+
+    /// Unpause the contract
+    /// 
+    /// # Arguments
+    /// * `e` - The environment
+    /// 
+    /// # Panics
+    /// Panics if caller is not admin or if contract is already unpaused
+    pub fn unpause(e: Env) {
+        // Enforce admin-only
+        let admin: Address = e
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic!("Contract not initialized"));
+        admin.require_auth();
+        Pausable::unpause(&e);
+    }
+
+    /// Check if the contract is paused
+    /// 
+    /// # Arguments
+    /// * `e` - The environment
+    /// 
+    /// # Returns
+    /// `true` if paused, `false` otherwise
+    pub fn is_paused(e: Env) -> bool {
+        Pausable::is_paused(&e)
+    }
+
+/// Check if an address is a verifier (public version)
     pub fn is_verifier(e: Env, address: Address) -> bool {
         Self::is_authorized_verifier(&e, &address)
     }
@@ -618,11 +664,14 @@ impl AttestationEngineContract {
         data: Map<String, String>,
         is_compliant: bool,
     ) -> Result<(), AttestationError> {
-        // 1. Reentrancy protection
+// 1. Reentrancy protection
         if e.storage().instance().has(&DataKey::ReentrancyGuard) {
             panic!("Reentrancy detected");
         }
         e.storage().instance().set(&DataKey::ReentrancyGuard, &true);
+
+        // Check if contract is paused
+        Pausable::require_not_paused(&e);
 
         // 2. Verify caller signed the transaction
         caller.require_auth();
