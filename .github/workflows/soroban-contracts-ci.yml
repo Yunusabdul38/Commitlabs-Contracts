@@ -26,7 +26,7 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Add Soroban Rust target
+      - name: Add Soroban Rust targets
         run: |
           rustup target add wasm32-unknown-unknown
           rustup target add wasm32v1-none
@@ -100,6 +100,12 @@ jobs:
           cargo test
           echo "✓ Integration tests passed"
           
+      - name: Validate monitoring config
+        run: |
+          chmod +x monitoring/scripts/validate_monitoring_config.sh
+          monitoring/scripts/validate_monitoring_config.sh
+          echo "✓ Monitoring config validated"
+
       - name: Validate monitoring config
         run: |
           chmod +x monitoring/scripts/validate_monitoring_config.sh
