@@ -19,6 +19,7 @@ pub mod emergency;
 pub mod error_codes;
 pub mod errors;
 pub mod events;
+pub mod fees;
 pub mod math;
 pub mod pausable;
 pub mod rate_limiting;

@@ -135,7 +135,6 @@ pub struct Commitment {
     pub status: String, // "active", "settled", "violated", "early_exit"
 }
 
-// Import Commitment types from commitment_core (define locally for cross-contract calls)
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -712,8 +711,8 @@ impl AttestationEngineContract {
         let attestation = Attestation {
             commitment_id: commitment_id.clone(),
             attestation_type: attestation_type.clone(),
-            data,
-            timestamp: e.ledger().timestamp(),
+            data: data.clone(),
+            timestamp,
             verified_by: caller.clone(),
             is_compliant,
         };
@@ -730,7 +729,7 @@ impl AttestationEngineContract {
             .unwrap_or_else(|| Vec::new(&e));
 
         // Add new attestation
-        attestations.push_back(attestation);
+        attestations.push_back(attestation.clone());
 
         // Store updated list
         e.storage().persistent().set(&key, &attestations);
