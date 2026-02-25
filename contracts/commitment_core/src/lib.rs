@@ -556,7 +556,30 @@ impl CommitmentCoreContract {
 
         let old_value = commitment.current_value;
         commitment.current_value = new_value;
-        set_commitment(&e, &commitment);
+
+        // Check for violations after updating value
+        let loss_percent = if commitment.amount > 0 {
+            SafeMath::loss_percent(commitment.amount, commitment.current_value)
+        } else {
+            0
+        };
+        let max_loss = commitment.rules.max_loss_percent as i128;
+        let loss_violated = loss_percent > max_loss;
+
+        if loss_violated {
+            commitment.status = String::from_str(&e, "violated");
+            set_commitment(&e, &commitment);
+            e.events().publish(
+                (symbol_short!("Violated"), commitment_id.clone()),
+                (symbol_short!("RuleViol"), e.ledger().timestamp()),
+            );
+        } else {
+            set_commitment(&e, &commitment);
+            e.events().publish(
+                (symbol_short!("ValUpd"), commitment_id),
+                (new_value, e.ledger().timestamp()),
+            );
+        }
 
         // Adjust TotalValueLocked: TVL -= old_value, TVL += new_value
         let current_tvl = e
@@ -568,11 +591,6 @@ impl CommitmentCoreContract {
         e.storage()
             .instance()
             .set(&DataKey::TotalValueLocked, &new_tvl);
-
-        e.events().publish(
-            (symbol_short!("ValUpd"), commitment_id),
-            (new_value, e.ledger().timestamp()),
-        );
     }
 
     /// Check if commitment rules are violated
