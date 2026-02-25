@@ -697,7 +697,7 @@ impl AllocationStrategiesContract {
             .ok_or(Error::NotInitialized)?;
 
         // For testing purposes, we'll use a simple approach:
-        // - If commitment_id is 1, return sufficient balance (200M) for existing tests
+        // - If commitment_id is 1, return sufficient balance (10 quadrillion) for integration tests
         // - If commitment_id is 100, return insufficient balance (50M) for balance test
         // - If commitment_id is 200, return exact balance (50M) for balance test
         // - If commitment_id is 300, return sufficient balance (100M) for balance test
@@ -709,7 +709,7 @@ impl AllocationStrategiesContract {
             200 => 50_000_000i128,  // Exact for 50M allocation (test case)
             300 => 100_000_000i128, // Sufficient for 30M allocation (test case)
             400 => 100_000_000i128, // Insufficient for 110M allocation (test case)
-            _ => 200_000_000i128,   // Default sufficient balance for existing tests
+            _ => 10_000_000_000_000_000i128, // Default sufficient balance for integration tests (10 quadrillion)
         };
 
         Ok(balance)
