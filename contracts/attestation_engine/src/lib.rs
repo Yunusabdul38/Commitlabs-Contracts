@@ -1610,5 +1610,3 @@ fn require_valid_wasm_hash(e: &Env, wasm_hash: &BytesN<32>) -> Result<(), Attest
 mod tests;
 #[cfg(all(test, feature = "benchmark"))]
 mod benchmarks;
-#[cfg(test)]
-mod tests;
