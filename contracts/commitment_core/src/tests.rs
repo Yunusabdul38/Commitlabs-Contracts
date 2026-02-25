@@ -1,12 +1,12 @@
 #![cfg(test)]
 
 use super::*;
+use shared_utils::TimeUtils;
 use soroban_sdk::{
     symbol_short,
     testutils::{Address as _, Events, Ledger},
     vec, Address, Env, IntoVal, String,
 };
-use shared_utils::TimeUtils;
 
 // Helper function to create a test commitment
 // ===============================
@@ -34,6 +34,7 @@ fn test_create_commitment_i128_max() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
+        grace_period_days: 0,
     };
 
     let amount = i128::MAX;
@@ -42,7 +43,13 @@ fn test_create_commitment_i128_max() {
     // We wrap in should_panic attributes when expecting a defined limit, but here
     // we simply call it to ensure compilation and runtime behavior.
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::create_commitment(e.clone(), owner.clone(), amount, asset_address.clone(), rules.clone());
+        CommitmentCoreContract::create_commitment(
+            e.clone(),
+            owner.clone(),
+            amount,
+            asset_address.clone(),
+            rules.clone(),
+        );
     });
 }
 
@@ -67,11 +74,18 @@ fn test_create_commitment_amount_one() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
+        grace_period_days: 0,
     };
 
     let amount = 1i128;
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::create_commitment(e.clone(), owner.clone(), amount, asset_address.clone(), rules.clone());
+        CommitmentCoreContract::create_commitment(
+            e.clone(),
+            owner.clone(),
+            amount,
+            asset_address.clone(),
+            rules.clone(),
+        );
     });
 }
 
@@ -89,9 +103,12 @@ fn test_update_value_zero_behaves() {
 
     e.as_contract(&contract_id, || {
         CommitmentCoreContract::initialize(e.clone(), admin.clone(), nft_contract.clone());
-        let commitment = create_test_commitment(&e, "boundary_update", &owner, 1000, 1000, 10, 30, 1000);
+        let commitment =
+            create_test_commitment(&e, "boundary_update", &owner, 1000, 1000, 10, 30, 1000);
         set_commitment(&e, &commitment);
-        e.storage().instance().set(&DataKey::TotalValueLocked, &1000i128);
+        e.storage()
+            .instance()
+            .set(&DataKey::TotalValueLocked, &1000i128);
     });
 
     let client = CommitmentCoreContractClient::new(&e, &contract_id);
@@ -113,9 +130,12 @@ fn test_update_value_negative_panics() {
 
     e.as_contract(&contract_id, || {
         CommitmentCoreContract::initialize(e.clone(), admin.clone(), nft_contract.clone());
-        let commitment = create_test_commitment(&e, "boundary_update", &owner, 1000, 1000, 10, 30, 1000);
+        let commitment =
+            create_test_commitment(&e, "boundary_update", &owner, 1000, 1000, 10, 30, 1000);
         set_commitment(&e, &commitment);
-        e.storage().instance().set(&DataKey::TotalValueLocked, &1000i128);
+        e.storage()
+            .instance()
+            .set(&DataKey::TotalValueLocked, &1000i128);
     });
 
     let client = CommitmentCoreContractClient::new(&e, &contract_id);
@@ -136,9 +156,20 @@ fn test_early_exit_and_settle_large_amounts() {
 
     e.as_contract(&contract_id, || {
         CommitmentCoreContract::initialize(e.clone(), admin.clone(), nft_contract.clone());
-        let commitment = create_test_commitment(&e, "large_amount", &owner, i128::MAX, i128::MAX, 10, 30, 1000);
+        let commitment = create_test_commitment(
+            &e,
+            "large_amount",
+            &owner,
+            i128::MAX,
+            i128::MAX,
+            10,
+            30,
+            1000,
+        );
         set_commitment(&e, &commitment);
-        e.storage().instance().set(&DataKey::TotalValueLocked, &i128::MAX);
+        e.storage()
+            .instance()
+            .set(&DataKey::TotalValueLocked, &i128::MAX);
     });
 
     let client = CommitmentCoreContractClient::new(&e, &contract_id);
@@ -222,7 +253,7 @@ fn test_create_commitment_valid() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     let _amount = 1000i128;
@@ -246,7 +277,7 @@ fn test_validate_rules_invalid_duration() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     // Test invalid duration - should panic
@@ -267,7 +298,7 @@ fn test_validate_rules_invalid_max_loss() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     // Test invalid max loss percent - should panic
@@ -288,7 +319,7 @@ fn test_validate_rules_invalid_type() {
         commitment_type: String::from_str(&e, "invalid_type"), // Invalid type
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     // Test invalid commitment type - should panic
@@ -306,7 +337,7 @@ fn test_validate_rules_invalid_type() {
 fn test_create_commitment_duration_zero() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -323,7 +354,7 @@ fn test_create_commitment_duration_zero() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     e.as_contract(&contract_id, || {
@@ -336,7 +367,7 @@ fn test_create_commitment_duration_zero() {
 fn test_create_commitment_max_loss_over_100() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -353,7 +384,7 @@ fn test_create_commitment_max_loss_over_100() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     e.as_contract(&contract_id, || {
@@ -366,7 +397,7 @@ fn test_create_commitment_max_loss_over_100() {
 fn test_create_commitment_amount_zero() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -378,16 +409,17 @@ fn test_create_commitment_amount_zero() {
     });
 
     let rules = CommitmentRules {
-            duration_days: 30,
-            max_loss_percent: 10,
-            commitment_type: String::from_str(&e, "safe"),
-            early_exit_penalty: 5,
-            min_fee_threshold: 100,
-            grace_period_days: 0,
-        };
+        duration_days: 30,
+        max_loss_percent: 10,
+        commitment_type: String::from_str(&e, "safe"),
+        early_exit_penalty: 5,
+        min_fee_threshold: 100,
+        grace_period_days: 0,
+    };
 
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::create_commitment(e.clone(), owner, 0, asset_address, rules); // Invalid amount
+        CommitmentCoreContract::create_commitment(e.clone(), owner, 0, asset_address, rules);
+        // Invalid amount
     });
 }
 
@@ -418,17 +450,11 @@ fn test_create_commitment_expiration_overflow() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::create_commitment(
-            e.clone(),
-            owner,
-            1000,
-            asset_address,
-            rules,
-        );
+        CommitmentCoreContract::create_commitment(e.clone(), owner, 1000, asset_address, rules);
     });
 }
 
@@ -450,7 +476,7 @@ fn test_checked_calculate_expiration_max_duration_success() {
 fn test_create_commitment_amount_negative() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -462,16 +488,17 @@ fn test_create_commitment_amount_negative() {
     });
 
     let rules = CommitmentRules {
-            duration_days: 30,
-            max_loss_percent: 10,
-            commitment_type: String::from_str(&e, "safe"),
-            early_exit_penalty: 5,
-            min_fee_threshold: 100,
-            grace_period_days: 0,
-        };
+        duration_days: 30,
+        max_loss_percent: 10,
+        commitment_type: String::from_str(&e, "safe"),
+        early_exit_penalty: 5,
+        min_fee_threshold: 100,
+        grace_period_days: 0,
+    };
 
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::create_commitment(e.clone(), owner, -100, asset_address, rules); // Invalid amount
+        CommitmentCoreContract::create_commitment(e.clone(), owner, -100, asset_address, rules);
+        // Invalid amount
     });
 }
 
@@ -480,7 +507,7 @@ fn test_create_commitment_amount_negative() {
 fn test_create_commitment_invalid_type() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -497,7 +524,7 @@ fn test_create_commitment_invalid_type() {
         commitment_type: String::from_str(&e, "invalid"), // Invalid type
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     e.as_contract(&contract_id, || {
@@ -509,7 +536,7 @@ fn test_create_commitment_invalid_type() {
 fn test_create_commitment_valid_rules() {
     let e = Env::default();
     e.mock_all_auths();
-    
+
     let contract_id = e.register_contract(None, CommitmentCoreContract);
     let admin = Address::generate(&e);
     let nft_contract = Address::generate(&e);
@@ -521,13 +548,13 @@ fn test_create_commitment_valid_rules() {
     });
 
     let rules = CommitmentRules {
-            duration_days: 30,
-            max_loss_percent: 10,
-            commitment_type: String::from_str(&e, "safe"),
-            early_exit_penalty: 5,
-            min_fee_threshold: 100,
-            grace_period_days: 0,
-        };
+        duration_days: 30,
+        max_loss_percent: 10,
+        commitment_type: String::from_str(&e, "safe"),
+        early_exit_penalty: 5,
+        min_fee_threshold: 100,
+        grace_period_days: 0,
+    };
 
     // This will fail at NFT minting since we don't have a real NFT contract,
     // but it validates that the rules validation passes
@@ -992,7 +1019,7 @@ fn test_create_commitment_event() {
         commitment_type: String::from_str(&e, "safe"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
-            grace_period_days: 0,
+        grace_period_days: 0,
     };
 
     // Note: This might panic if mock token transfers are not set up, but we are testing events.
@@ -1141,10 +1168,7 @@ fn test_settle_rejects_when_not_expired() {
     });
 
     e.as_contract(&contract_id, || {
-        CommitmentCoreContract::settle(
-            e.clone(),
-            String::from_str(&e, commitment_id),
-        );
+        CommitmentCoreContract::settle(e.clone(), String::from_str(&e, commitment_id));
     });
 }
 
@@ -1432,9 +1456,7 @@ fn test_early_exit_state_update() {
 
 #[test]
 fn test_early_exit_penalty_values() {
-    let e = Env::default();
-
-    // Test penalty calculation logic with different values
+    // Test penalty calculation logic with boundary and representative values
     let test_cases = [
         (1000i128, 10u32, 100i128, 900i128),  // 10% of 1000
         (1000i128, 5u32, 50i128, 950i128),    // 5% of 1000
@@ -1442,17 +1464,33 @@ fn test_early_exit_penalty_values() {
         (500i128, 20u32, 100i128, 400i128),   // 20% of 500
         (1000i128, 0u32, 0i128, 1000i128),    // 0% penalty
         (1000i128, 50u32, 500i128, 500i128),  // 50% penalty
+        (1000i128, 100u32, 1000i128, 0i128),  // 100% penalty
     ];
 
     for (current_value, penalty_percent, expected_penalty, expected_returned) in test_cases.iter() {
-        let penalty = (current_value * (*penalty_percent as i128)) / 100;
-        let returned = current_value - penalty;
+        let penalty = SafeMath::penalty_amount(*current_value, *penalty_percent);
+        let returned = SafeMath::sub(*current_value, penalty);
 
         assert_eq!(penalty, *expected_penalty);
         assert_eq!(returned, *expected_returned);
 
         // Verify conservation: penalty + returned = current_value
         assert_eq!(penalty + returned, *current_value);
+    }
+}
+
+#[test]
+fn test_early_exit_penalty_zero_current_value() {
+    let current_value = 0i128;
+    let test_penalties = [0u32, 50u32, 100u32];
+
+    for penalty_percent in test_penalties.iter() {
+        let penalty = SafeMath::penalty_amount(current_value, *penalty_percent);
+        let returned = SafeMath::sub(current_value, penalty);
+
+        assert_eq!(penalty, 0);
+        assert_eq!(returned, 0);
+        assert_eq!(penalty + returned, current_value);
     }
 }
 
@@ -1694,7 +1732,6 @@ fn test_update_value_no_violation() {
             .instance()
             .set(&DataKey::TotalValueLocked, &1000i128);
     });
-
     let client = CommitmentCoreContractClient::new(&e, &contract_id);
     client.update_value(&String::from_str(&e, "test_id"), &950);
 
@@ -1729,4 +1766,3 @@ fn test_update_value_triggers_violation() {
     assert_eq!(updated.status, String::from_str(&e, "active"));
     assert!(client.check_violations(&String::from_str(&e, "test_id")));
 }
-
