@@ -23,6 +23,7 @@ impl MockNftContract {
         _commitment_type: String,
         _initial_amount: i128,
         _asset_address: Address,
+        _early_exit_penalty: u32,
     ) -> u32 {
         1
     }
@@ -35,6 +36,7 @@ fn test_rules(e: &Env) -> CommitmentRules {
         commitment_type: String::from_str(e, "balanced"),
         early_exit_penalty: 5,
         min_fee_threshold: 100,
+        grace_period_days: 0,
     }
 }
 
