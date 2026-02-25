@@ -81,6 +81,7 @@ pub struct CommitmentRules {
     pub commitment_type: String, // "safe", "balanced", "aggressive"
     pub early_exit_penalty: u32,
     pub min_fee_threshold: i128,
+    pub grace_period_days: u32,
 }
 
 #[contracttype]
@@ -136,6 +137,7 @@ fn call_nft_mint(
     commitment_type: &String,
     initial_amount: i128,
     asset_address: &Address,
+    early_exit_penalty: u32,
 ) -> u32 {
     let mut args = Vec::new(e);
     args.push_back(owner.clone().into_val(e));
@@ -145,6 +147,7 @@ fn call_nft_mint(
     args.push_back(commitment_type.clone().into_val(e));
     args.push_back(initial_amount.into_val(e));
     args.push_back(asset_address.clone().into_val(e));
+    args.push_back(early_exit_penalty.into_val(e));
 
     // In Soroban, contract calls return the value directly
     // Failures cause the entire transaction to fail
@@ -487,6 +490,7 @@ impl CommitmentCoreContract {
             &rules.commitment_type,
             amount,
             &asset_address,
+            rules.early_exit_penalty,
         );
 
         // Update commitment with NFT token ID
@@ -812,6 +816,7 @@ impl CommitmentCoreContract {
             commitment.rules.early_exit_penalty,
         );
         let returned_amount = SafeMath::sub(commitment.current_value, penalty_amount);
+        let original_value = commitment.current_value;
 
         // Update commitment status to early_exit
         commitment.status = String::from_str(&e, "early_exit");
@@ -824,7 +829,7 @@ impl CommitmentCoreContract {
             .instance()
             .get::<_, i128>(&DataKey::TotalValueLocked)
             .unwrap_or(0);
-        let new_tvl = current_tvl - commitment.current_value;
+        let new_tvl = current_tvl - original_value;
         e.storage()
             .instance()
             .set(&DataKey::TotalValueLocked, &new_tvl);
@@ -838,7 +843,7 @@ impl CommitmentCoreContract {
             token_client.transfer(&contract_address, &commitment.owner, &returned_amount);
         }
 
-        // Call NFT contract to update NFT status (mark as inactive/early_exited)
+        // Call NFT contract to mark as inactive (early exited, not settled)
         let nft_contract = e
             .storage()
             .instance()
@@ -847,11 +852,11 @@ impl CommitmentCoreContract {
                 set_reentrancy_guard(&e, false);
                 fail(&e, CommitmentError::NotInitialized, "early_exit")
             });
-
-        // Call settle on NFT to mark it as inactive
+        
+        // Call mark_inactive on NFT instead of settle (since not expired)
         let mut args = Vec::new(&e);
         args.push_back(commitment.nft_token_id.into_val(&e));
-        e.invoke_contract::<()>(&nft_contract, &Symbol::new(&e, "settle"), args);
+        e.invoke_contract::<()>(&nft_contract, &Symbol::new(&e, "mark_inactive"), args);
 
         // Clear reentrancy guard
         set_reentrancy_guard(&e, false);
